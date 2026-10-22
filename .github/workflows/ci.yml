@@ -1,7 +1,8 @@
 ---
 name: GitHub CI
 
-permissions: {}
+permissions:
+  contents: read
 
 on:
   pull_request:
@@ -15,38 +16,34 @@ defaults:
     shell: 'bash -Eeuo pipefail -x {0}'
 
 jobs:
-  generate-jobs:
-    name: Generate Jobs
-    runs-on: ubuntu-latest
-    outputs:
-      strategy: ${{ steps.generate-jobs.outputs.strategy }}
-    steps:
-      - uses: actions/checkout@v6
-      - uses: docker-library/bashbrew@v0.1.13
-      - id: generate-jobs
-        name: Generate Jobs
-        run: |
-          strategy="$(GITHUB_REPOSITORY=matomo "$BASHBREW_SCRIPTS/github-actions/generate.sh")"
-          strategy="$("$BASHBREW_SCRIPTS/github-actions/munge-i386.sh" -c <<<"$strategy")"
-          echo "strategy=$strategy" >> "$GITHUB_OUTPUT"
-          jq . <<<"$strategy" # sanity check / debugging aid
-
   test:
-    needs: generate-jobs
-    strategy: ${{ fromJson(needs.generate-jobs.outputs.strategy) }}
-    name: ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.variant }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: apache
+            example: apache
+          # the fpm variants run behind the web image (docker build --target web)
+          - variant: fpm
+            example: nginx
+          - variant: fpm-alpine
+            example: nginx
+    env:
+      COMPOSE_FILE: .examples/${{ matrix.example }}/compose.yml
+      MARIADB_PASSWORD: matomo
+      MARIADB_ROOT_PASSWORD: root
+      MATOMO_VARIANT: ${{ matrix.variant }}
     steps:
       - uses: actions/checkout@v6
-      - name: Prepare Environment
-        run: ${{ matrix.runs.prepare }}
-      - name: Pull Dependencies
-        run: ${{ matrix.runs.pull }}
-      - name: Build ${{ matrix.name }}
-        run: ${{ matrix.runs.build }}
-      - name: History ${{ matrix.name }}
-        run: ${{ matrix.runs.history }}
-      - name: Test ${{ matrix.name }}
-        run: ${{ matrix.runs.test }}
+      - name: Build and start
+        run: docker compose up --build --detach --wait
+      - name: Test
+        run: tests/smoke-test.sh http://localhost:8080
+      - name: Logs
+        if: always()
+        run: docker compose logs
       - name: '"docker images"'
-        run: ${{ matrix.runs.images }}
+        if: always()
+        run: docker images

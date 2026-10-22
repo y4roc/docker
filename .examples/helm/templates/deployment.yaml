@@ -1,4 +1,4 @@
-apiVersion: apps/v1beta2
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ template "matomo.fullname" . }}
@@ -23,7 +23,9 @@ spec:
         - name: {{ .Chart.Name }}-nginx
           image: "{{ .Values.matomoNginx.image.repository }}:{{ .Values.matomoNginx.image.tag }}"
           imagePullPolicy: {{ .Values.matomoNginx.image.pullPolicy }}
-          command: ["nginx", "-g", "daemon off;", "-c", "/config/nginx.conf"]
+          env:
+            - name: MATOMO_FPM_ADDRESS
+              value: "127.0.0.1:9000"
           ports:
             - name: http
               containerPort: 80
@@ -37,20 +39,20 @@ spec:
           #     path: /
           #     port: http
           volumeMounts:
-            - mountPath: /config
-              name: config
-            - mountPath: /var/www/html
-              name: html-files
+            # Marketplace plugins, Tag Manager containers and the JavaScript tracker
+            - mountPath: /var/lib/matomo
+              name: data
+              readOnly: true
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
-            - name: http
+            - name: fastcgi
               containerPort: 9000
               protocol: TCP
           volumeMounts:
-            - mountPath: /var/www/html
-              name: html-files
+            - mountPath: /var/lib/matomo
+              name: data
           resources:
 {{ toYaml .Values.resources | indent 12 }}
     {{- with .Values.nodeSelector }}
@@ -66,8 +68,10 @@ spec:
 {{ toYaml . | indent 8 }}
     {{- end }}
       volumes:
-      - name: config
-        configMap:
-          name: {{ template "matomo.fullname" . }}
-      - name: html-files
+      - name: data
+      {{- if .Values.persistence.existingClaim }}
+        persistentVolumeClaim:
+          claimName: {{ .Values.persistence.existingClaim }}
+      {{- else }}
         emptyDir: {}
+      {{- end }}

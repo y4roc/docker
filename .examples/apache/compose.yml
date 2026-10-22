@@ -14,16 +14,23 @@ services:
       - MARIADB_PASSWORD=${MARIADB_PASSWORD}
       - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
       - MARIADB_USER=matomo
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      retries: 20
 
   app:
-    image: matomo
+    build:
+      context: ../..
+      args:
+        - MATOMO_VERSION
+    image: matomo:apache
     restart: always
     volumes:
-#     - ./config:/var/www/html/config:z
-#     - ./logs:/var/www/html/logs:z
-      - matomo:/var/www/html:z
+      - matomo:/var/lib/matomo:z
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       - MATOMO_DATABASE_ADAPTER=mysql
       - MATOMO_DATABASE_DBNAME=matomo
@@ -32,7 +39,7 @@ services:
       - MATOMO_DATABASE_TABLES_PREFIX=matomo_
       - MATOMO_DATABASE_USERNAME=matomo
     ports:
-      - 8080:80
+      - ${MATOMO_PORT:-8080}:80
 
 volumes:
   db:

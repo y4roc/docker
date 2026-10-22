@@ -1,0 +1,8 @@
+# the build only needs these files
+*
+!apache.conf
+!bootstrap.php
+!docker-entrypoint.sh
+!matomo-config.php
+!nginx.conf
+!php.ini

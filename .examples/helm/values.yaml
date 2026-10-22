@@ -4,10 +4,16 @@
 
 replicaCount: 1
 
+# built from the Dockerfile in the repository root and pushed to your registry:
+#   docker build --build-arg VARIANT=fpm-alpine -t <registry>/matomo:fpm-alpine .
 image:
   repository: matomo
-  tag: 3.5.1-fpm-alpine
+  tag: fpm-alpine
   pullPolicy: IfNotPresent
+
+# the data of Matomo (config, plugins, GeoIP databases, ...); without a claim it is lost with the pod
+persistence:
+  existingClaim: ""
 
 service:
   type: ClusterIP
@@ -44,8 +50,9 @@ tolerations: []
 
 affinity: {}
 
+#   docker build --target web -t <registry>/matomo:web .
 matomoNginx:
   image:
-    repository: nginx
-    tag: alpine
+    repository: matomo
+    tag: web
     pullPolicy: IfNotPresent
