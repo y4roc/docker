@@ -66,7 +66,15 @@ return array_merge(require '/usr/local/share/matomo/config.php', [
 ]);
 ```
 
-The entrypoint creates what is missing in `/var/lib/matomo` and, when it runs as root, hands it over to `www-data` (or to `APACHE_RUN_USER`/`APACHE_RUN_GROUP`). With `--user`, the volume has to be writable by that user.
+The entrypoint creates what is missing in `/var/lib/matomo`.
+
+## User
+
+The container runs as `www-data` (uid 33 in the Debian variants, 82 in `fpm-alpine`). A new Docker volume belongs to `www-data` already; a bind mount or a Kubernetes volume has to be writable by that user (e.g. with `fsGroup` in Kubernetes, see the [Helm example](.examples/helm)).
+
+Alternatively, start the container as root (`--user root`, `user: root` in Compose). The entrypoint then hands `/var/lib/matomo` over to `www-data` (or to `APACHE_RUN_USER`/`APACHE_RUN_GROUP`) on every start, and Apache and PHP-FPM switch to that user themselves. Do this once when you switch between Debian and Alpine variants on the same volume.
+
+Apache listens on port 80, which Docker and Podman let non-root users open. Kubernetes needs the sysctl `net.ipv4.ip_unprivileged_port_start=0` in the pod's `securityContext` for that, or the container has to run as root.
 
 ## Matomo Installation
 
@@ -98,11 +106,11 @@ The PHP memory limit can be configured with the following environment variable:
 
 ## Console
 
-Run Matomo's console as the owner of the files, otherwise the files it creates belong to root:
-
 ```bash
-docker compose exec --user www-data app php console core:archive --url=https://matomo.example.org
+docker compose exec app php console core:archive --url=https://matomo.example.org
 ```
+
+If the container runs as root, add `--user www-data`, otherwise the files the console creates belong to root.
 
 Use `console core:archive` for [automatic archiving](https://matomo.org/faq/on-premise/how-to-set-up-auto-archiving-of-your-reports/); the older `misc/cron/archive.php` doesn't know about `/var/lib/matomo`.
 
@@ -136,7 +144,7 @@ Older images kept Matomo's code *and* data in a volume on `/var/www/html` and co
 2. Copy the data with the new image:
 
    ```bash
-   docker run --rm --entrypoint sh -v matomo:/old:ro -v matomo-data:/var/lib/matomo matomo -c '
+   docker run --rm --user root --entrypoint sh -v matomo:/old:ro -v matomo-data:/var/lib/matomo matomo -c '
      set -e
      cd /var/lib/matomo
      mkdir -p config misc public/js public/misc public/plugins
@@ -150,11 +158,12 @@ Older images kept Matomo's code *and* data in a volume on `/var/www/html` and co
      for plugin in /old/plugins/*/; do
        [ -d "/var/www/html/plugins/$(basename "$plugin")" ] || cp -a "$plugin" public/plugins/
      done
+     chown -R www-data:www-data .
    '
    ```
 
    If you had your own `config/config.php`, merge it as shown under [Persistent data](#persistent-data).
-3. Mount `matomo-data` on `/var/lib/matomo` instead of `matomo` on `/var/www/html` (with nginx, switch to the web image, see the [example](.examples/nginx/compose.yml)) and start Matomo. The entrypoint adjusts the file owners and upgrades the database if the version changed.
+3. Mount `matomo-data` on `/var/lib/matomo` instead of `matomo` on `/var/www/html` (with nginx, switch to the web image, see the [example](.examples/nginx/compose.yml)) and start Matomo. The entrypoint upgrades the database if the version changed.
 4. Remove the old volume once everything works.
 
 ## Log import

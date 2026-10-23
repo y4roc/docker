@@ -148,3 +148,7 @@ LABEL org.opencontainers.image.title="Matomo" \
 	org.opencontainers.image.url="https://matomo.org" \
 	org.opencontainers.image.source="https://github.com/matomo-org/docker" \
 	org.opencontainers.image.version="${MATOMO_VERSION}"
+
+# start as root (--user root) to let the entrypoint fix the owner of the data volume, Apache and PHP-FPM then
+# switch to www-data themselves
+USER www-data

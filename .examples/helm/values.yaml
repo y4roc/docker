@@ -15,6 +15,10 @@ image:
 persistence:
   existingClaim: ""
 
+# Matomo runs as www-data (82 in fpm-alpine, 33 in fpm); the group makes the volume writable for it
+podSecurityContext:
+  fsGroup: 82
+
 service:
   type: ClusterIP
   port: 80

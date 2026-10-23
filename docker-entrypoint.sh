@@ -153,7 +153,8 @@ workdir="$PWD"
 cd "$data"
 
 if [ ! -w . ]; then
-	echo >&2 "error: $data is not writable by user $(id -u), mount a volume there that is"
+	echo >&2 "error: $data is not writable by user $(id -u); make it so, or start the container as root"
+	echo >&2 "       (--user root) to let this entrypoint hand it over to www-data"
 	exit 1
 fi
 prepare_data
