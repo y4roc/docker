@@ -1,0 +1,134 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "customDatasources": {
+    "pecl": {
+      "description": "the latest stable release of a PECL package, where install-php-extensions gets it from",
+      "defaultRegistryUrlTemplate": "https://pecl.php.net/rest/r/{{packageName}}/stable.txt",
+      "format": "plain"
+    }
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "the Matomo release the Dockerfile builds",
+      "managerFilePatterns": [
+        "/^Dockerfile$/"
+      ],
+      "matchStrings": [
+        "ARG MATOMO_VERSION=(?<currentValue>\\S+)"
+      ],
+      "depNameTemplate": "matomo-org/matomo",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "the PHP version of the php base images",
+      "managerFilePatterns": [
+        "/^Dockerfile$/"
+      ],
+      "matchStrings": [
+        "ARG PHP_VERSION=(?<currentValue>\\S+)"
+      ],
+      "depNameTemplate": "php",
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)$"
+    },
+    {
+      "customType": "regex",
+      "description": "the APCu extension installed by install-php-extensions",
+      "managerFilePatterns": [
+        "/^Dockerfile$/"
+      ],
+      "matchStrings": [
+        "\\sapcu-(?<currentValue>\\d+\\.\\d+\\.\\d+)\\s"
+      ],
+      "depNameTemplate": "apcu",
+      "packageNameTemplate": "apcu",
+      "datasourceTemplate": "custom.pecl",
+      "versioningTemplate": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$"
+    },
+    {
+      "customType": "regex",
+      "description": "the redis extension installed by install-php-extensions",
+      "managerFilePatterns": [
+        "/^Dockerfile$/"
+      ],
+      "matchStrings": [
+        "\\sredis-(?<currentValue>\\d+\\.\\d+\\.\\d+)\\s"
+      ],
+      "depNameTemplate": "redis",
+      "packageNameTemplate": "redis",
+      "datasourceTemplate": "custom.pecl",
+      "versioningTemplate": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "a pull request per Matomo release, once its tarball is on builds.matomo.org (about 5 minutes after the GitHub release)",
+      "matchDepNames": [
+        "matomo-org/matomo"
+      ],
+      "minimumReleaseAge": "1 hour",
+      "commitMessageTopic": "Matomo",
+      "commitMessageExtra": "to {{newVersion}}"
+    },
+    {
+      "description": "the remaining build dependencies in one weekly pull request",
+      "matchDepNames": [
+        "!matomo-org/matomo",
+        "!php"
+      ],
+      "groupName": "build dependencies",
+      "schedule": [
+        "before 6am on monday"
+      ]
+    },
+    {
+      "description": "PHP gets its own weekly pull request, a new minor version may not suit Matomo yet",
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchDepNames": [
+        "php"
+      ],
+      "commitMessageTopic": "PHP",
+      "schedule": [
+        "before 6am on monday"
+      ]
+    },
+    {
+      "description": "the php base images follow ARG PHP_VERSION (see customManagers), not each FROM on its own",
+      "matchManagers": [
+        "dockerfile"
+      ],
+      "matchPackageNames": [
+        "php"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "only the stable branch of nginx (even minor versions)",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "nginx"
+      ],
+      "allowedVersions": "/^\\d+\\.\\d*[02468]-alpine$/"
+    },
+    {
+      "description": "the Compose and Helm examples refer to the images built from this repository",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "matomo"
+      ],
+      "enabled": false
+    }
+  ]
+}

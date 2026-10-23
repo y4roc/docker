@@ -30,6 +30,8 @@ Build arguments:
 
 - `VARIANT`: `apache` (default), `fpm` or `fpm-alpine`
 - `MATOMO_VERSION`: the Matomo release to build, defaults to the one in the `Dockerfile`
+
+[Renovate](https://docs.renovatebot.com/) ([`renovate.json`](renovate.json)) keeps the versions in the `Dockerfile` up to date: it opens a pull request for every Matomo release (an hour after it's published, when the release tarball is available), and a weekly one for PHP and the other build dependencies (base images, PECL extensions, the CI). The CI builds and tests each of them.
 - `PHP_VERSION`: the version of the [`php`](https://hub.docker.com/_/php) base image, defaults to `8.4`
 
 ## Running
