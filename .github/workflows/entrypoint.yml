@@ -29,6 +29,8 @@ jobs:
       FROM: ${{ matrix.from }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - name: Build
         run: docker build --pull --tag "matomo-test:$VARIANT" "$VARIANT"
       - name: Test
