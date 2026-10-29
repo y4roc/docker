@@ -38,7 +38,8 @@ version_greater() {
 }
 
 # usage: run_as CMD
-# (runs CMD as the owner of the Matomo files, so that everything it creates stays usable by Apache or PHP-FPM)
+# (runs CMD as the user that Apache or PHP-FPM run as: APACHE_RUN_USER or www-data, or the user of the container if it
+#  doesn't run as root. That's not necessarily the owner of the files, but everything CMD creates stays usable by them.)
 run_as() {
 	if [ "$uid" = '0' ]; then
 		su -p "$user" -s /bin/sh -c "$1"

@@ -7,8 +7,8 @@
 #   3. downgrade   a volume with a newer Matomo stays as it is
 #   4. parallel    two containers that start at the same time on the same volume upgrade it once
 #   5. install     a fresh installation through the web installer works
-#   6. permissions a container that doesn't run as root upgrades a volume it can write to; a volume that the owner of
-#                  the files can't write to stays as it is
+#   6. permissions a container that doesn't run as root upgrades a volume it can write to; a volume that the user of
+#                  Apache or PHP-FPM can't write to stays as it is
 #   7. retry       a step that fails doesn't stop the container, and the next start repeats it
 #
 # usage: .github/tests/entrypoint.sh VARIANT IMAGE [TEST...]
